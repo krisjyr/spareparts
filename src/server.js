@@ -1,24 +1,8 @@
 const { parse } = require("csv-parse");
 const fs = require("fs");
-const { get } = require("http");
 
 // specify the path of the CSV file
 const path = "./LE.txt";
-
-// Create a readstream
-// Parse options: delimiter and start from line 1
-
-let data1 = {
-  ID: "01492600209",
-};
-
-let data2 = {
-  name: "Own.handbook",
-};
-
-let data3 = {
-  name: "",
-};
 
 search(
   "http://localhost:5500/src/thing.json?search=Own.handbook&page=2&limit=30"
@@ -64,6 +48,7 @@ async function search(endpoint) {
   console.log(getItemsForCurrentPage());
 }
 
+function generateJson() {
 const parser = fs.createReadStream(path).pipe(
   parse({
     delimiter: "/n",
@@ -74,7 +59,6 @@ const parser = fs.createReadStream(path).pipe(
   })
 );
 
-function generateJson() {
   const records = [];
   let JSONrecords = [];
 
