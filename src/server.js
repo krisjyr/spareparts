@@ -1,66 +1,63 @@
 const { parse } = require("csv-parse");
 const fs = require("fs");
+const express = require("express");
+const app = express();
+
 
 // specify the path of the CSV file
-const path = "./LE.txt";
+const path = "./src/LE.txt";
+const records = [];
 
-search(
-  "http://localhost:5500/src/thing.json?search=Own.handbook&page=2&limit=30"
-);
+generateJson();
 
-async function search(endpoint) {
-  const request = await fetch(endpoint);
-  const response = await request.json();
+async function search() {
+  app.get("/search/:searchString", (req, res) => {
+    let items = [];
+    let currentPage = req.query.page;
+    const itemsPerPage = 30
+    const dataSearch = req.params.searchString
 
-  if (!request.ok) {
-    console.error("An error occurred", request.status);
-    return;
-  }
+    if (dataSearch !== undefined) {
+      searchLoop(records, dataSearch);
+    } else {
+      console.log("No valid search parameters provided");
+    }
 
-  const url = new URL(endpoint);
-  const params = new URLSearchParams(url.search);
+    if (currentPage === undefined) {
+      currentPage = 1;
+    }
 
-  let items = [];
-  let currentPage = params.get("page");
-  const itemsPerPage = params.get("limit");
-  const dataSearch = params.get("search");
+    
 
-  if (dataSearch !== undefined) {
-    searchLoop(response, dataSearch);
-  } else {
-    console.log("No valid search parameters provided");
-  }
-
-  function searchLoop(response, data) {
-    for (let item in response) {
-      if (response[item].name === data || response[item].ID === data) {
-        items.push(response[item]);
+    function searchLoop(response, data) {
+      for (let item in response) {
+        if (response[item].name === data || response[item].ID === data) {
+          items.push(response[item]);
+        }
       }
     }
-  }
 
-  function getItemsForCurrentPage() {
-    const start = (currentPage - 1) * itemsPerPage;
-    const end = currentPage * itemsPerPage;
-    return items.slice(start, end);
-  }
+    function getItemsForCurrentPage() {
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = currentPage * itemsPerPage;
+      return items.slice(start, end);
+    }
 
-  console.log(getItemsForCurrentPage());
+    console.log(JSON.stringify(getItemsForCurrentPage()));
+    res.send(JSON.stringify(getItemsForCurrentPage()));
+  });
 }
 
 function generateJson() {
-const parser = fs.createReadStream(path).pipe(
-  parse({
-    delimiter: "/n",
-    rowdelimiter: " ",
-    from_line: 1,
-    relax_quotes: true,
-    escape: "\\",
-  })
-);
-
-  const records = [];
-  let JSONrecords = [];
+  const parser = fs.createReadStream(path).pipe(
+    parse({
+      delimiter: "/n",
+      rowdelimiter: " ",
+      from_line: 1,
+      relax_quotes: true,
+      escape: "\\",
+    })
+  );
 
   parser.on("readable", function () {
     let record;
@@ -91,18 +88,15 @@ const parser = fs.createReadStream(path).pipe(
   });
 
   parser.on("error", function (error) {
-    // Handle the errors
     console.log(error.message);
   });
   parser.on("end", function () {
-    // executed when parsing is complete
-
-    JSONrecords = JSON.stringify(records);
-
-    fs.writeFile("thing.json", JSONrecords, function (err, result) {
-      if (err) console.log("error", err);
-    });
+    search();
 
     console.log("done");
   });
 }
+
+app.listen(3000, ()=>{
+  console.log("Server running on port 3000")
+});
